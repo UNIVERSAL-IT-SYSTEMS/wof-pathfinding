@@ -31,8 +31,11 @@ namespace PathFinding
         private string mobile_services_host = "[your mobile services host]";
         private string security_key = "[your key]";
 
-        private string table_name = "offices";
+
+        private string requests_table_name = "Requests";
         private string filter = "complete%20eq%20false%20and%20cancelled%20eq%20false";
+
+        private string offices_table_name = "Offices";
         
         private int start_office = 0;
         private string node_host = "[your nodebot host]";
@@ -42,9 +45,10 @@ namespace PathFinding
         ManualResetEvent CompletedEvent = new ManualResetEvent(false);
 
 
+
         public override void Run()
         {
-            string sURL = "https://" + mobile_services_host + "/tables/" + table_name + "?$filter=(" + filter + ")";
+            string sURL = "https://" + mobile_services_host + "/tables/" + requests_table_name + "?$filter=(" + filter + ")";
 
             while (true)
             {
@@ -53,7 +57,7 @@ namespace PathFinding
                 List<Record> records = getNewRecords(sURL);
 
                 foreach (Record record in records)
-                { 
+                {
                     Path shortest_path = findPath(Convert.ToInt32(record.get("office")));
                     sendInstructions(shortest_path);
                     setRequestToComplete(record.get("id"));
@@ -66,7 +70,7 @@ namespace PathFinding
          * It creates the list of Record objects with given office Numbers
          * 
          */
-        private List <Record> getDummieRecords(List <int> office_numbers)
+        private List<Record> getDummieRecords(List<int> office_numbers)
         {
             List<Record> records = new List<Record>();
             foreach (int number in office_numbers)
@@ -250,7 +254,7 @@ namespace PathFinding
         {
 
             string body = "{\"complete\":true}";
-            string sURL = "https://" + mobile_services_host + "/tables/" + table_name + "/" + id;
+            string sURL = "https://" + mobile_services_host + "/tables/" + requests_table_name + "/" + id;
 
             HttpWebRequest wrPATCHURL;
             wrPATCHURL = (HttpWebRequest)WebRequest.Create(sURL);
@@ -276,6 +280,7 @@ namespace PathFinding
             // Set the maximum number of concurrent connections 
             ServicePointManager.DefaultConnectionLimit = 12;
             createGraph();
+            sendAvaliableRoomsToApp();
 
             return base.OnStart();
         }
@@ -303,6 +308,41 @@ namespace PathFinding
             string filePath = "map.svg";
 
             my_graph = Converter.convert(filePath);
+        }
+
+        private void sendAvaliableRoomsToApp()
+        {
+            //delete old rooms
+            foreach (Node node in my_graph.Nodes)
+            {
+                if (node.OfficeLocation > 0)
+                {
+
+                    sendRoom("{\"number\":" + Convert.ToString(node.OfficeLocation) + "}");
+                }
+            }
+        }
+
+        private void sendRoom(string body)
+        {
+            string sURL = "https://" + mobile_services_host + "/tables/" + offices_table_name;
+
+            HttpWebRequest wrPOSTURL;
+            wrPOSTURL = (HttpWebRequest)WebRequest.Create(sURL);
+            wrPOSTURL.Method = "POST";
+            wrPOSTURL.Accept = "application/json";
+            wrPOSTURL.ContentType = "application/json";
+            wrPOSTURL.Headers.Add("X-ZUMO-APPLICATION", security_key);
+            wrPOSTURL.Host = mobile_services_host;
+            wrPOSTURL.ContentLength = body.Length;
+
+            Stream stream = wrPOSTURL.GetRequestStream();
+            byte[] byteArray = Encoding.UTF8.GetBytes(body);
+            stream.Write(byteArray, 0, byteArray.Length);
+
+            WebResponse resp = wrPOSTURL.GetResponse();
+            stream.Close();
+            Thread.Sleep(1000);
         }
 
         public override void OnStop()
