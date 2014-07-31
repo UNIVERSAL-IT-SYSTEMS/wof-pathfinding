@@ -36,6 +36,56 @@ namespace calcTest
                 "The office number is correctely extracted");
         }
 
+        [TestMethod]
+        public void testConvertALine()
+        {
+            
+            Graph my_graph = Converter.convert("../../tests/line.svg");
+            Assert.AreEqual<int>(0, my_graph.Edges.Count, "resulting graph contains wrong number of edges");
+            Assert.AreEqual<int>(0, my_graph.Nodes.Count, "resulting graph contains wrong number of nodes");
+            
+        }
+
+
+        [TestMethod]
+        public void testConvertWithNoOffices()
+        {
+            
+            Graph my_graph = Converter.convert("../../tests/1node0edges.svg");
+            Assert.AreEqual<int>(0, my_graph.Edges.Count, "resulting graph contains wrong number of edges");
+            Assert.AreEqual<int>(1, my_graph.Nodes.Count, "resulting graph contains wrong number of nodes");
+
+            my_graph = Converter.convert("../../tests/3node3edges.svg");
+            Assert.AreEqual<int>(3, my_graph.Edges.Count, "resulting graph contains wrong number of edges");
+            Assert.AreEqual<int>(3, my_graph.Nodes.Count, "resulting graph contains wrong number of nodes");
+  
+        }
+
+
+        [TestMethod]
+        public void testConvertWithOffices()
+        {
+            Graph my_graph = Converter.convert("../../tests/5node5edges.svg");
+            Assert.AreEqual<int>(5, my_graph.Edges.Count, "resulting graph contains wrong number of edges");
+            Assert.AreEqual<int>(5, my_graph.Nodes.Count, "resulting graph contains wrong number of nodes");
+            Assert.AreEqual<int>(1, my_graph.findNodeByOfficeNumber(1).OfficeLocation, "resulting graph does not contain the node with office 1");
+            Assert.AreEqual<int>(2, my_graph.findNodeByOfficeNumber(2).OfficeLocation, "resulting graph does not contain the node with office 2");
+        }
+
+
+        [TestMethod]
+        public void testConvertWithTryinToAddDuplicateNodes()
+        {
+            Graph my_graph = Converter.convert("../../tests/1nodeWith4EdgesAnd4OfficeNodes.svg");
+            Assert.AreEqual<int>(4, my_graph.Edges.Count, "resulting graph contains wrong number of edges");
+            Assert.AreEqual<int>(5, my_graph.Nodes.Count, "resulting graph contains wrong number of nodes");
+            Assert.AreEqual<int>(1, my_graph.findNodeByOfficeNumber(1).OfficeLocation, "resulting graph does not contain the node with office 1");
+            Assert.AreEqual<int>(2, my_graph.findNodeByOfficeNumber(2).OfficeLocation, "resulting graph does not contain the node with office 2");
+            Assert.AreEqual<int>(3, my_graph.findNodeByOfficeNumber(3).OfficeLocation, "resulting graph does not contain the node with office 3");
+            Assert.AreEqual<int>(4, my_graph.findNodeByOfficeNumber(4).OfficeLocation, "resulting graph does not contain the node with office 4");
+            Assert.AreEqual<int>(4, my_graph.findNodeByOfficeNumber(-1).Edges.Count, "resulting graph does not have three edges connected together");
+        }
+
 
     }
 }

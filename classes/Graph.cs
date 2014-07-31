@@ -10,6 +10,13 @@ namespace PathFinding
 {
     public class Graph 
     {
+        private double scale;
+
+        public double Scale
+        {
+            get { return scale; }
+            set { scale = value; }
+        }
         
         private Edgelist edges;
 
@@ -26,10 +33,18 @@ namespace PathFinding
         }
         
 
-        public Graph() 
+        public Graph(double epsilon) 
         {
-            edges = new Edgelist();
-            nodes = new Nodelist();
+            edges = new Edgelist(epsilon);
+            nodes = new Nodelist(epsilon);
+            scale = 1;
+        }
+
+        public Graph()
+        {
+            edges = new Edgelist(1);
+            nodes = new Nodelist(1);
+            scale = 1;
         }
 
 
@@ -78,14 +93,18 @@ namespace PathFinding
 
         public class Nodelist : List<Node>
         {
-            public Nodelist()
-            { }
+            private double epsilon;
+
+            public Nodelist(double epsilon)
+            {
+                this.epsilon = epsilon;
+            }
 
             public new bool Contains(Node node)
             {
                 for (int i = 0 ; i < Count; i++)
                 {
-                    if (node == this[i])
+                    if (node.isCloseTo(this[i], epsilon))
                     {
                         return true;
                     }
@@ -99,14 +118,19 @@ namespace PathFinding
 
         public class Edgelist : List<Edge>
         {
-            public Edgelist()
-            { }
+            private double epsilon;
+
+            public Edgelist(double epsilon)
+            {
+                this.epsilon = epsilon;
+
+            }
 
             public new bool Contains(Edge edge)
             {
                 for (int i = 0 ; i < Count; i++)
                 {
-                    if (edge == this[i])
+                    if (edge.isCloseTo(this[i], epsilon))
                     {
                         return true;
                     }

@@ -17,7 +17,7 @@ namespace PathFinding
      */
     public class Converter
     {
-        private double epsilon;
+        private const double  epsilon = 1;
 
         private Graph graph;
         public Graph Graph
@@ -26,17 +26,11 @@ namespace PathFinding
         }
 
         private List<Line> lines;
-        private double scale;
 
-        public double Scale
-        {
-            get { return scale; }
-            set { scale = value;  }
-        }
 
         public Converter()
         {
-            graph = new Graph();
+            graph = new Graph(epsilon);
             lines = new List<Line>();
         }
 
@@ -44,15 +38,10 @@ namespace PathFinding
          * Converts an SVG map into a graph
          * Each crossing point becomes a node. Each line between two crossing points becomes an edge.
          * @param filePath the path to the file containing the map
-         * @param scale scale of the map in coordinates/units 
-         * (ex. if a line started at (0,0) and ended at (5,5) and had an actual length of 3 inches, 
-         * its scale would be 5/3 coordinates/inch)
-         * @param epsilon the amount of error that is permittable for two points to be considered equal
-         * (two points that are closer than epsilon will be considered equal)
          * 
          * @return resulting graph
          */
-        public static Graph convert(string path_to_map, double scale, double epsilon)
+        public static Graph convert(string path_to_map)
         {
             
             XmlReaderSettings settings = new XmlReaderSettings();
@@ -61,8 +50,6 @@ namespace PathFinding
             XmlDocument doc = new XmlDocument();
             doc.Load(reader);
             Converter converter = new Converter();
-            converter.Scale = scale;
-            converter.epsilon = epsilon;
             converter.transferData(doc);
             converter.generateEdges();
             reader.Close();           
@@ -71,43 +58,68 @@ namespace PathFinding
 
         private void transferData(XmlDocument doc)
         {
-
-            XmlNode main = doc.LastChild;
-            XmlNodeList main_nodes = main.ChildNodes;
-            XmlElement g_tag = (XmlElement)main_nodes[5];
-            XmlNodeList g_tags = g_tag.GetElementsByTagName("g");
-            
-            processGTags(g_tags);
-
+                XmlNodeList g_tags = doc.GetElementsByTagName("g");
+                for (int i = 1; i < g_tags.Count; i++)
+                {
+                    XmlElement g_tag = (XmlElement)g_tags[i];
+                    processShape(g_tag);
+                }            
         }
 
-        private void processGTags(XmlNodeList g_tags)
+        private void processShape(XmlElement g_tag)
         {
-
-            for (int i = 0; i < g_tags.Count; i++)
-            {
-                XmlElement g_tag =(XmlElement) g_tags[i];
-
-                string transform = "";
-                if (g_tag.HasAttribute("transform"))
-                {
-                    transform = g_tag.GetAttribute("transform");
-                }
-
-                int officeNumber = -1;
-                XmlNodeList v_tags = g_tag.GetElementsByTagName("v:cp");
-                if( v_tags.Count != 0)
-                {
-                    XmlElement v_tag = (XmlElement)v_tags[0];
-                    officeNumber = extractNumberFromParentheses(v_tag.GetAttribute("v:val"));
-                }
-
+   
                 XmlNodeList path_tags = g_tag.GetElementsByTagName("path");
-                XmlElement path = (XmlElement)path_tags[0];                                  
-                string path_data = path.GetAttribute("d");
-                processPath(path_data, transform, officeNumber);
-               
+
+                if (path_tags.Count != 0)
+                {
+                    XmlElement path = (XmlElement)path_tags[0];                                  
+                    string path_data = path.GetAttribute("d");
+                    
+                    string transform = "";
+                    if (g_tag.HasAttribute("transform"))
+                    {
+                        transform = g_tag.GetAttribute("transform");
+                    }
+
+                    int officeNumber = -1;
+                    XmlNodeList v_tags = g_tag.GetElementsByTagName("v:cp");
+                    if( v_tags.Count != 0)
+                    {
+                        XmlElement v_tag = (XmlElement)v_tags[0];
+                        string label = v_tag.GetAttribute("v:lbl");
+                        if (label == "scale")
+                        {
+                            int length = extractNumberFromParentheses(v_tag.GetAttribute("v:val"));
+                            calculateScale(path_data, transform, length);
+                            return;
+                        }
+                        else if (label == "officeNumber")
+                        {
+                            officeNumber = extractNumberFromParentheses(v_tag.GetAttribute("v:val"));
+                        }
+                    }
+                    processPath(path_data, transform, officeNumber);
+                }                            
+        }
+
+        private void calculateScale(string path, string transform_data, int length)
+        {
+            
+            string[] coordinates = path.Split(' ');
+
+            if (coordinates.Length < 4)
+            {
+                throw new Exception("Path tag of the scale formatted incorrectely");
             }
+
+            Point start_pt = new Point(getCoordinateFromString(coordinates[0]), getCoordinateFromString(coordinates[1]));
+            transform(transform_data, start_pt);
+
+            Point end_pt = new Point(getCoordinateFromString(coordinates[2]), getCoordinateFromString(coordinates[3]));
+            transform(transform_data, end_pt);
+
+            graph.Scale = CoordinateCalculator.getScale(start_pt, end_pt, length);
         }
 
 
@@ -116,48 +128,43 @@ namespace PathFinding
         {
             string[] coordinates = path.Split(' ');
 
-            if (coordinates.Length <= 1)
+            if (coordinates.Length > 1)
             {
-                throw new Exception();
-            }
+                Point current_pt = new Point(getCoordinateFromString(coordinates[0]), getCoordinateFromString(coordinates[1]));
+                transform(transformationData, current_pt);
 
-            Point current_pt = new Point(getCoordinateFromString(coordinates[0]), getCoordinateFromString(coordinates[1]));
-            transform(transformationData, current_pt);
+                for (int i = 2; i < coordinates.Length - 1; i += 2)
+                {
+                    Point end_pt = new Point(getCoordinateFromString(coordinates[i]), getCoordinateFromString(coordinates[i + 1]));
+                    transform(transformationData, end_pt);
 
-
-            for (int i = 2; i < coordinates.Length; i += 2)
-            {
-                Point end_pt = new Point(getCoordinateFromString(coordinates[i]), getCoordinateFromString(coordinates[i + 1]));
-                transform(transformationData, end_pt);
-
-                if (!startNewLine(coordinates[i]))
-                { 
-
-                    Line curr_line = new Line(current_pt, end_pt, officeNumber);
-                    
-
-                    for (int j = 0; j < lines.Count; j++ )
+                    if (!startNewLine(coordinates[i]))
                     {
-                        Point crossing_pt = curr_line.crosses(lines[j], epsilon);
-                        if (!string.IsNullOrEmpty(Convert.ToString(crossing_pt)))
+
+                        Line curr_line = new Line(current_pt, end_pt, officeNumber);
+
+                        for (int j = 0; j < lines.Count; j++)
                         {
-                            Node new_node = new Node();
-                            new_node.CrossingPoint = crossing_pt;
-                            if (curr_line.getOfficeNumber() != -1) 
+                            Point crossing_pt = curr_line.crosses(lines[j], epsilon);
+                            if (!string.IsNullOrEmpty(Convert.ToString(crossing_pt)))
                             {
-                                new_node.OfficeLocation = curr_line.getOfficeNumber();
+                                Node new_node = new Node();
+                                new_node.CrossingPoint = crossing_pt;
+                                if (curr_line.getOfficeNumber() != -1)
+                                {
+                                    new_node.OfficeLocation = curr_line.getOfficeNumber();
+                                }
+                                else if (lines[j].getOfficeNumber() != -1)
+                                {
+                                    new_node.OfficeLocation = lines[j].getOfficeNumber();
+                                }
+                                graph.addNode(new_node);
                             }
-                            else if (lines[j].getOfficeNumber() != -1)
-                            {
-                                new_node.OfficeLocation = lines[j].getOfficeNumber();
-                            }
-                            graph.addNode(new_node);
                         }
+                        lines.Add(curr_line);
                     }
-                    lines.Add(curr_line);
+                    current_pt = end_pt;
                 }
-                
-                current_pt = end_pt;
             }
         }
 
@@ -231,7 +238,7 @@ namespace PathFinding
         {
             if (coordinate_text.Length == 0)
             {
-                throw new Exception();
+                throw new Exception("No coordinate was found");
             }
 
             if (Char.IsLetter(coordinate_text, 0))
@@ -239,7 +246,7 @@ namespace PathFinding
                 coordinate_text = coordinate_text.Substring(1, coordinate_text.Length - 1);
                 if (coordinate_text.Length == 0)
                 {
-                    throw new Exception();
+                    throw new Exception("No coordinate was found");
                 }
             }
 
@@ -252,7 +259,7 @@ namespace PathFinding
             for (int i = 0; i < lines.Count; i++)
             {
 
-                SortedNodeContainer container = new SortedNodeContainer(epsilon);
+                SortedNodeContainer container = new SortedNodeContainer();
                 for (int j = 0; j < graph.Nodes.Count; j++)
                 {
                     if (lines[i].contains(graph.Nodes[j].CrossingPoint, epsilon))
@@ -264,28 +271,24 @@ namespace PathFinding
                 {
                     for (int j = 0; j < container.Count - 1; j++)
                     {
-                        graph.addEdge(container[j], container[j + 1], scale);
+                        graph.addEdge(container[j], container[j + 1], graph.Scale);
                     }
                 }
             }
         }
+
 
         /*
          * The container that stores nodes that belong to the same straigt line on a map in order
          */ 
         public class SortedNodeContainer : List<Node>
         {
-            private double epsilon;
 
             /*
              * creates a new instance of the container
-             * @param epsilon the amount of error that is permittable for two points to be considered equal
-             * (two points that are closer than epsilon will be considered equal)
              */ 
-            public SortedNodeContainer(double epsilon) 
-            {
-                this.epsilon = epsilon;
-            }
+            public SortedNodeContainer() 
+            {}
 
             /*
              * Puts a new node to the container accordingly to its position on a line
@@ -298,7 +301,7 @@ namespace PathFinding
              */ 
             public new void Add(Node newNode)
             {
-                if (Count <= 1 )
+                if (Count <= 1)
                 {
                     base.Add(newNode);
                 }

@@ -28,7 +28,8 @@ namespace run_ns {
             if (my_graph.Nodes.Count != 0 && my_graph.Edges.Count != 0)
             {
                 getNewCommands(my_graph, filePath);
-            }              
+            }   
+
 
             return 0;
         }
@@ -102,7 +103,7 @@ namespace run_ns {
         static void search(int end_office, Graph my_graph, string filePath)
         {
 
-            int start_office = 0;
+            int start_office = 7104;
 
             try
             {
@@ -113,7 +114,7 @@ namespace run_ns {
                 SVGcreator.drawPath("path.svg", filePath, shortest_path);
                 Console.WriteLine("Your path has been calculated. The resulting path is in path.svg");
             }
-            catch
+            catch(Exception e)
             {
                 Console.WriteLine("The path cannot be calculated");
             }

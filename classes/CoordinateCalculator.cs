@@ -27,7 +27,6 @@ namespace PathFinding
         {
             if (length == 0)
                 return 0;
-
             double scale = euclideanDistance(start_pt, end_pt) / length;
             return scale;
         }
@@ -43,6 +42,10 @@ namespace PathFinding
          */ 
         public static double euclideanDistance(Point a, Point b)
         {
+            if (string.IsNullOrEmpty(Convert.ToString(a)))
+                throw new Exception("Point a is null");
+            if (string.IsNullOrEmpty(Convert.ToString(b)))
+                throw new Exception("Point b is null");
             return Math.Sqrt(Math.Pow(a.X - b.X, 2) + Math.Pow(a.Y - b.Y, 2));
         }
 

@@ -48,6 +48,10 @@ namespace PathFinding
          */
         public Path findPath(Node startNode, Node endNode)
         {
+            if (string.IsNullOrEmpty(Convert.ToString(startNode)))
+                throw new Exception("No such start node found in the graph");
+            if (string.IsNullOrEmpty(Convert.ToString(endNode)))
+                throw new Exception("No such end node found in the graph");
             refreshPathFinder();
             this.startNode = startNode;
             this.endNode = endNode;

@@ -120,8 +120,7 @@ namespace PathFinding
                 float crossing_y = this.getSlope() * crosing_x + this.getConstant();
                 Point crossing_pt = new Point(crosing_x, crossing_y);
                 if (this.containsInVector(crossing_pt, epsilon) && line.containsInVector(crossing_pt, epsilon))
-                    return crossing_pt;
-               
+                    return crossing_pt;              
             }       
 
             return null;
@@ -134,7 +133,7 @@ namespace PathFinding
         public float getSlope()
         {
             if (end_pt.X == start_pt.X)
-                throw new Exception();
+                throw new Exception("Line is vertical");
 
             return (end_pt.Y - start_pt.Y) / (end_pt.X - start_pt.X);
         }
@@ -151,10 +150,11 @@ namespace PathFinding
 
         private bool containsInVector(Point point, double epsilon)
         {
-            return ((CoordinateCalculator.isBetween(point.X, this.getStartPoint().X, this.getEndPoint().X, epsilon)
-                || CoordinateCalculator.isBetween(point.X, this.getEndPoint().X, this.getStartPoint().X, epsilon))
-                && (CoordinateCalculator.isBetween(point.Y, this.getStartPoint().Y, this.getEndPoint().Y, epsilon)
-                || CoordinateCalculator.isBetween(point.Y, this.getEndPoint().Y, this.getStartPoint().Y, epsilon)));
+            bool x_in_range = CoordinateCalculator.isBetween(point.X, this.getStartPoint().X, this.getEndPoint().X, epsilon)
+                || CoordinateCalculator.isBetween(point.X, this.getEndPoint().X, this.getStartPoint().X, epsilon);
+            bool y_in_range = CoordinateCalculator.isBetween(point.Y, this.getStartPoint().Y, this.getEndPoint().Y, epsilon)
+                || CoordinateCalculator.isBetween(point.Y, this.getEndPoint().Y, this.getStartPoint().Y, epsilon);
+            return (x_in_range && y_in_range);
         }
 
         /*
@@ -165,9 +165,9 @@ namespace PathFinding
          */
         public bool contains(Point point, double epsilon)
         {
-            if (end_pt.X == start_pt.X)
+            if (CoordinateCalculator.hasDifferenceLessThan(end_pt.X, start_pt.X, epsilon))
             {
-                return (CoordinateCalculator.hasDifferenceLessThan(point.X, start_pt.X, 0.001)
+                return (CoordinateCalculator.hasDifferenceLessThan(point.X, start_pt.X, epsilon)
                     && containsInVector(point, epsilon));
             }
             else
