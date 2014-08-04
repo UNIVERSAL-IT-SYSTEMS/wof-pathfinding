@@ -31,12 +31,20 @@ namespace PathFinding
             Assert.AreEqual(expectedAngle, directionFromPoints.angle, "Angle not being calculated correctly when init with points.");
             Assert.AreEqual(expectedDistance, directionFromPoints.distance, "Distance not being calculated correctly when init with points.");
 
+            Direction directionFromTwoPoints = new Direction(p2, p3, scale);
+            Assert.AreEqual(0, directionFromTwoPoints.angle, "Angle should be zero when no previous point is given.");
+            Assert.AreEqual(expectedDistance, directionFromTwoPoints.distance, "Distance not being calculated correctly when init with points.");
+
             Node n1 = new Node(7421, x1, y1);
             Node n2 = new Node(7422, x2, y2);
             Node n3 = new Node(7423, x3, y3);
             Direction directionFromNodes = new Direction(n1, n2, n3, scale);
             Assert.AreEqual(expectedAngle, directionFromNodes.angle, "Angle not being calculated correctly when init with nodes.");
             Assert.AreEqual(expectedDistance, directionFromNodes.distance, "Distance not being calculated correctly when init with nodes.");
+
+            Direction directionFromTwoNodes = new Direction(n2, n3, scale);
+            Assert.AreEqual(0, directionFromTwoNodes.angle, "Angle should be zero when no previous node is given.");
+            Assert.AreEqual(expectedDistance, directionFromTwoNodes.distance, "Distance not being calculated correctly when init with nodes.");
 
             Edge e1 = new Edge(n1, n2, 3);
             Edge e2 = new Edge(n2, n3, 3);

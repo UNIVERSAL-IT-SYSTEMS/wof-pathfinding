@@ -36,7 +36,32 @@ namespace PathFinding
          */
         public Direction(Point previousPoint, Point currentPoint, Point nextPoint, double scale)
         {
-            this.previousPoint = previousPoint;
+            if (previousPoint != null)
+            {
+                this.previousPoint = previousPoint;
+            }
+            else
+            {
+                this.previousPoint = null;
+            }
+            this.currentPoint = currentPoint;
+            this.nextPoint = nextPoint;
+            _distance = CoordinateCalculator.euclideanDistance(currentPoint, nextPoint) / scale;
+        }
+
+        /**
+         * Creates a new Direction from the two given points. When no previous point is given
+         * the robot assumes it starts off facing the right direction.
+         * 
+         * @param currentPoint The point the robot is currently at.
+         * @param nextPoint The point the robot is trying to get to next.
+         * @param scale Coordinates/Unit of Measurement (ex: coordinates/meter) This is how the Direction
+         * can take two points with x and y coordinates and determine how many meters (or other unit of measurement)
+         * that represents. You must be consistent with your scale throughout the project or you will be very unhappy.
+         */
+        public Direction(Point currentPoint, Point nextPoint, double scale)
+        {
+            this.previousPoint = null;
             this.currentPoint = currentPoint;
             this.nextPoint = nextPoint;
             _distance = CoordinateCalculator.euclideanDistance(currentPoint, nextPoint) / scale;
@@ -54,7 +79,32 @@ namespace PathFinding
          */
         public Direction(Node previousNode, Node currentNode, Node nextNode, double scale)
         {
-            this.previousPoint = previousNode.CrossingPoint;
+            if (previousNode != null)
+            {
+                this.previousPoint = previousNode.CrossingPoint;
+            }
+            else
+            {
+                this.previousPoint = null;
+            }
+            this.currentPoint = currentNode.CrossingPoint;
+            this.nextPoint = nextNode.CrossingPoint;
+            _distance = CoordinateCalculator.euclideanDistance(currentPoint, nextPoint) / scale;
+        }
+
+        /**
+         * Creates a new Direction from the three given nodes. When no previous node is given
+         * the robot assumes it starts off facing the right direction.
+         * 
+         * @param currentNode The poNodeint the robot is currently at.
+         * @param nextNode The Node the robot is trying to get to next.
+         * @param scale Coordinates/Unit of Measurement (ex: coordinates/meter) This is how the Direction
+         * can take two Nodes' points with x and y coordinates and determine how many meters (or other unit of measurement)
+         * that represents. You must be consistent with your scale throughout the project or you will be very unhappy.
+         */
+        public Direction(Node currentNode, Node nextNode, double scale)
+        {
+            this.previousPoint = null;
             this.currentPoint = currentNode.CrossingPoint;
             this.nextPoint = nextNode.CrossingPoint;
             _distance = CoordinateCalculator.euclideanDistance(currentPoint, nextPoint) / scale;

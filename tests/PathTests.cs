@@ -165,17 +165,21 @@ namespace PathFinding
             Point p3 = new Point(1, 1);
             Point p4 = new Point(0, 1);
             Point p5 = new Point(1, 1);
+            Point p6 = new Point(1, 2);
+
 
             Node n1 = new Node(1, p1);
             Node n2 = new Node(2, p2);
             Node n3 = new Node(3, p3);
             Node n4 = new Node(4, p4);
             Node n5 = new Node(5, p5);
+            Node n6 = new Node(6, p6);
 
             Edge onetwo = new Edge(n1, n2, 3);
             Edge twothree = new Edge(n2, n3, 5);
             Edge threefour = new Edge(n3, n4, 7);
             Edge fourfive = new Edge(n4, n5, 9);
+            Edge fivesix = new Edge(n5, n6, 11);
 
             Path p = new Path(n1);
             p.addEdgeToPath(onetwo);
@@ -203,6 +207,19 @@ namespace PathFinding
             Assert.AreEqual(expectedFourthDirection, fourthDirection, "Fourth direction not calculated properly.");
 
             Assert.AreEqual(listOfDirections.Last.Value, fourthDirection, "Fourth direction should be the last direction. Too many directions created.");
+
+            Path horizontalPath = new Path(n4);
+            horizontalPath.addEdgeToPath(threefour);
+
+            listOfDirections = horizontalPath.getListOfDirections(scale);
+            Assert.AreEqual(0, listOfDirections.First.Value.angle, "First direction's angle should be zero, even when horizontal.");
+
+            Path verticalPath = new Path(n5);
+            verticalPath.addEdgeToPath(fivesix);
+
+            listOfDirections = verticalPath.getListOfDirections(scale);
+            Assert.AreEqual(0, listOfDirections.First.Value.angle, "First direction's angle should be zero, even when vertical.");
+
         }
 
         [TestMethod]
