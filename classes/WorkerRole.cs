@@ -59,8 +59,14 @@ namespace PathFinding
                 foreach (Record record in records)
                 {
                     Path shortest_path = findPath(Convert.ToInt32(record.get("office")));
-                    sendInstructions(shortest_path);
-                    setRequestToComplete(record.get("id"));
+                    if (sendInstructions(shortest_path))
+                    {
+                        setRequestToComplete(record.get("id"));
+                    }
+                    else
+                    {
+                        //TODO: what do we do if the fridge is lost?
+                    }
                 }
             }
         }
@@ -112,7 +118,6 @@ namespace PathFinding
                         {
                             Record record = new Record(record_info);
                             records.Add(record);
-                            setRequestToComplete(record.get("id"));
                         }
 
                     }
@@ -217,8 +222,9 @@ namespace PathFinding
          * Sends the list of directions to the robot, using the nodebot host specified 
          * @param path the path to be sent to the robot
          */
-        private void sendInstructions(Path path)
+        private bool sendInstructions(Path path)
         {
+            bool requestSend = true;
 
             string body = path.getJSONDirections(my_graph.Scale);
             string sURL = "http://" + node_host + "/robot/list";
@@ -235,15 +241,26 @@ namespace PathFinding
 
             wrPOSTURL.Proxy = myProxy;
 
+            //wait 10 minutes until the robot is done and sends the response or assume it got lost 
+            wrPOSTURL.Timeout = 600000;
 
             Stream stream = wrPOSTURL.GetRequestStream();
             byte[] byteArray = Encoding.UTF8.GetBytes(body);
             stream.Write(byteArray, 0, byteArray.Length);
 
-            //TODO: CHECK IF RESPONSE IS OK
-            //WebResponse resp = wrPOSTURL.GetResponse();
+
+            try
+            {
+                WebResponse resp = wrPOSTURL.GetResponse();
+            }
+            catch
+            {
+                requestSend = false;
+            }
+
             stream.Close();
 
+            return requestSend;
         }
 
         /*
@@ -312,14 +329,39 @@ namespace PathFinding
 
         private void sendAvaliableRoomsToApp()
         {
-            //delete old rooms
+            deleteOldRooms();
             foreach (Node node in my_graph.Nodes)
             {
                 if (node.OfficeLocation > 0)
                 {
-
-                    sendRoom("{\"number\":" + Convert.ToString(node.OfficeLocation) + "}");
+                    string number = Convert.ToString(node.OfficeLocation);
+                    if (!officeExists(number))
+                    {
+                        sendRoom("{\"number\":" + number + "}");
+                    }
+                    Thread.Sleep(1000);
                 }
+            }
+        }
+
+        private void deleteOldRooms()
+        {
+            string sURL = "https://" + mobile_services_host + "/tables/" + offices_table_name;
+            List<Record> rooms = getNewRecords(sURL);
+            foreach (Record room in rooms)
+            {
+                HttpWebRequest wrDELETEURL;
+                wrDELETEURL = (HttpWebRequest)WebRequest.Create(sURL + "/" + room.get("id"));
+                wrDELETEURL.Method = "DELETE";
+                wrDELETEURL.Accept = "application/json";
+                wrDELETEURL.ContentType = "application/json";
+                wrDELETEURL.Headers.Add("X-ZUMO-APPLICATION", security_key);
+                wrDELETEURL.Host = mobile_services_host;
+
+                Stream objStream;
+                objStream = wrDELETEURL.GetResponse().GetResponseStream();
+
+                objStream.Close();
             }
         }
 
@@ -342,8 +384,27 @@ namespace PathFinding
 
             WebResponse resp = wrPOSTURL.GetResponse();
             stream.Close();
-            Thread.Sleep(1000);
         }
+
+        private bool officeExists(string number)
+        {
+            string sURL = "https://" + mobile_services_host + "/tables/" + offices_table_name + "?$filter=(number%20eq%20" + number + ")";
+            HttpWebRequest wrGETURL;
+            wrGETURL = (HttpWebRequest)WebRequest.Create(sURL);
+            wrGETURL.Accept = "application/json";
+            wrGETURL.Headers.Add("X-ZUMO-APPLICATION", security_key);
+            wrGETURL.Host = mobile_services_host;
+
+            Stream objStream;
+            objStream = wrGETURL.GetResponse().GetResponseStream();
+
+            string sLine = new StreamReader(objStream).ReadLine();
+
+            objStream.Close();
+
+            return (sLine != null && sLine != "[]");
+        }
+
 
         public override void OnStop()
         {
